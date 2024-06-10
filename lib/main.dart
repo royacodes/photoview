@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:photo_view/photo_view.dart';
-import 'package:flutter_hooks/flutter_hooks.dart';
 
 void main() {
   runApp(MyApp());
@@ -25,59 +23,53 @@ class HousePlan extends StatefulWidget {
 
 class _HousePlanState extends State<HousePlan> {
   final TransformationController _controller = TransformationController();
-  List<Offset> _tappedPoints = [];
-  Offset? _selectedPoint;
+  final List<Offset> _imagePoints = [];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Tap to add icons'),
+        title: Text('Long Press to Add Icons'),
       ),
-      body: InteractiveViewer(
-        transformationController: _controller,
-        boundaryMargin: EdgeInsets.all(100),
-        minScale: 0.5,
-        maxScale: 2,
-        child: Stack(
-          children: <Widget>[
-            Image.asset(
-              'assets/testplan.png',
-              fit: BoxFit.cover,
-            ),
-            ..._tappedPoints.map(
-                  (Offset point) => Positioned(
-                left: point.dx,
-                top: point.dy,
-                child: Transform(
-                  transform: Matrix4.inverted(_controller.value),
+      body: GestureDetector(
+        onLongPressStart: (LongPressStartDetails details) {
+          final RenderBox renderBox = context.findRenderObject() as RenderBox;
+          final Offset localOffset = renderBox.globalToLocal(details.globalPosition);
+          final Offset transformedOffset = _controller.toScene(localOffset);
+
+          setState(() {
+            _imagePoints.add(transformedOffset);
+          });
+        },
+        child: InteractiveViewer(
+          transformationController: _controller,
+          boundaryMargin: EdgeInsets.all(100),
+          minScale: 0.5,
+          maxScale: 2,
+          child: Stack(
+            children: [
+              Image.asset(
+                'assets/testplan.png',
+                fit: BoxFit.cover,
+              ),
+              for (final point in _imagePoints)
+                Positioned(
+                  left: point.dx - 24, // Adjust for half the width of the icon (48/2)
+                  top: point.dy - 85, // Adjust for height of the icon (48)
                   child: Icon(
                     Icons.location_on,
-                    color: point == _selectedPoint ? Colors.green : Colors.red,
+                    color: Colors.red,
+                    size: 48,
                   ),
                 ),
-              ),
-            ),
-            GestureDetector(
-              onTapDown: (TapDownDetails details) {
-                setState(() {
-                  _tappedPoints.add(details.localPosition);
-                });
-              },
-              onLongPressStart: (LongPressStartDetails details) {
-                setState(() {
-                  _selectedPoint = details.localPosition;
-                });
-              },
-            ),
-          ],
+            ],
+          ),
         ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           setState(() {
-            _tappedPoints.clear();
-            _selectedPoint = null;
+            _imagePoints.clear();
           });
         },
         tooltip: 'Clear',
